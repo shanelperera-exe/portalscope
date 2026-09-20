@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_TEST}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U explorer -d interdimensional_explorer_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_TEST}
+      RICK_AND_MORTY_API_URL: ${RICK_AND_MORTY_API_URL}
+      RICK_AND_MORTY_API_TIMEOUT: ${RICK_AND_MORTY_API_TIMEOUT}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      ENABLE_TEST_FAILURES: ${ENABLE_TEST_FAILURES}
+      APP_VERSION: ${APP_VERSION}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
